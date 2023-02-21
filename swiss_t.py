@@ -12,19 +12,75 @@ class Player:
         self.points = 0
         self.stats = []
         self.colors = []
+        self.color_num = 0
         self.opponents = []
-        self.floater = None  # None, Up or Down
+        self.floater = None  # None, u(Up) or d(Down)
+
+    def set_color_num(self):
+        w = 0
+        b = 0
+        for color in self.colors:
+            if color == "w":
+                w += 1
+            if color == "b":
+                b += 1
+        self.color_num = w-b
+
+
+class SubGroup:
+    def __init__(self):
+        self.players = []
+        self.b_players = []
+        self.w_players = []
+        self.wob_players = []
 
 
 class Group:
     def __init__(self, players):
+        self.sub0 = SubGroup()  # subgroups
+        self.sub1 = SubGroup()
         self.players = players
+        self.floaters = []
+        self.b_players = []
+        self.w_players = []
+        self.wob_players = []
         self.unpaired_players = None
         self.npairings = None
         self.pairings = []
 
+    def create_subs(self):
+        unsubed_p = self.players.copy()
+        n_p = int(len(self.players)/2)  # num players per sub
+        f = 0
+        a = 0
+        while len(self.sub0.players) < n_p:
+            if f < len(self.floaters):
+                self.sub0 += [self.floaters[f]]
+                unsubed_p.remove(self.floaters[f])
+                f += 1
+            else:
+                if self.players[a] in unsubed_p:
+                    self.sub0 += [self.players[a]]
+                    unsubed_p.remove(self.players[a])
+                a += 1
+        self.sub1.players = unsubed_p
+
+    def add_from_above(self, floaters):
+        self.players += floaters
+        self.floaters += floaters
+        self.order_by_points()
+
     def order_by_points(self):
         self.players.sort(key=lambda p: p.points, reverse=True)
+
+    def set_player_colors(self):
+        for p in self.unpaired_players:
+            if p.color_num == 2:
+                self.b_players += [p]
+            elif p.color_num == -2:
+                self.w_players += [p]
+            else:
+                self.wob_players += [p]
 
     def create_pairings(self):
         self.order_by_points()
@@ -34,6 +90,22 @@ class Group:
             self.pairings += [[self.players[k], self.players[k+self.npairings]]]
             self.unpaired_players.remove(self.players[k])
             self.unpaired_players.remove(self.players[k+self.npairings])
+        self.set_floaters()
+
+    def set_floaters(self):
+        for pairing in self.pairings:
+            p0 = pairing[0]
+            p1 = pairing[1]
+            if not p0.points == p1.points:
+                if p0.points > p1.points:
+                    p0.floater = "d"
+                    p1.floater = "u"
+                else:
+                    p0.floater = "u"
+                    p1.floater = "d"
+            else:
+                p0.floater = None
+                p1.floater = None
 
 
 class Round:
@@ -49,7 +121,7 @@ class Round:
         for pairing in self.pairings:
             players = []
             for pl in pairing:
-                players += pl.name
+                players += [pl.name]
             pairings += [players]
         return pairings
 
@@ -62,24 +134,37 @@ class Round:
         points = self.cround
         while not len(ungrouped_players) == 0:
             group = []
-            for player in self.players:
-                if player.points == points:
-                    group += [player]
-                    ungrouped_players.remove(player)
+            for p in self.players:
+                if p.points == points:
+                    group += [p]
+                    ungrouped_players.remove(p)
             self.groups += [Group(group)]
             points -= 1
 
     def create_pairings(self):
         for group in self.groups:
-            group.players += self.leftovers
+            group.add_from_above(self.leftovers)
             group.create_pairings()
             self.leftovers = group.unpaired_players
-            for player in self.leftovers:
-                group.players.remove(player)
+            for p in self.leftovers:
+                group.players.remove(p)
             self.pairings += group.pairings
         if not len(self.leftovers) == 0:
             self.groups += [Group(self.leftovers)]
             self.pairings += [self.groups[-1].players]
+        self.set_player_colors()
+
+    def set_player_colors(self):
+        for pairing in self.pairings:
+            if len(pairing) == 2:
+                pairing[0].colors += ["w"]
+                pairing[1].colors += ["b"]
+            else:
+                pairing[0].colors += [None]
+
+    def set_player_color_nums(self):
+        for p in self.players:
+            p.set_color_num()
 
 
 class Tournament:
@@ -91,6 +176,7 @@ class Tournament:
 
     def start_round(self, cround):
         self.round = Round(self.players)
+        self.round.set_player_color_nums()
         self.round.cround = cround
         self.round.order_by_points()
         self.round.create_groups()
