@@ -1,4 +1,9 @@
 # import time
+import sys
+from PQtGUI import *
+from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QTableWidget, QTableWidgetItem, QMainWindow, QPushButton
+
+
 def get_names(players):
     pn = []
     for p in players:
@@ -168,9 +173,8 @@ class Round:
 
 
 class Tournament:
-    def __init__(self, players, nrounds):
+    def __init__(self, players):
         self.players = players
-        self.nrounds = nrounds
         self.round = None
         self.standing = []
 
@@ -181,10 +185,10 @@ class Tournament:
         self.round.order_by_points()
         self.round.create_groups()
         self.round.create_pairings()
-        print(self.round.get_pairings())
 
 
 if __name__ == '__main__':
+    '''
     print("Please enter Player names. Press enter after each name. Press enter again, when finished")
     finished = False
     playerNames = []
@@ -196,10 +200,34 @@ if __name__ == '__main__':
             finished = True
     playerNames.sort(key=lambda p: p.name)
     numRounds = input("Enter number of rounds:")
-    tournament = Tournament(playerNames, numRounds)
+    tournament = Tournament(playerNames)
+    '''
 
+    # GUI
+    app = QApplication(sys.argv)
+
+    # get screen geometry
+    screen = app.primaryScreen()
+    size = screen.size()
+    rect = screen.availableGeometry()
+    w = rect.width()
+    h = rect.height()
+
+    # create window
+    window = MainWindow(w, h)
+    names = []
+    #window.set_players(names)  # set players
+    window.show()
+
+    sys.exit(app.exec())
+    ####
+
+'''
     for i in range(int(numRounds)):
         tournament.start_round(i)
         for player in tournament.players:
             player.points += float(input("result player "+player.name))
+'''
+
+
 
