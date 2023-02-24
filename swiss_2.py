@@ -42,6 +42,23 @@ class Player:
         self.opponents = []
         self.floater = None  # None, u(Up) or d(Down)
         self.bye = False
+        self.sonneborn = 0
+        self.buchholz = 0
+
+    def set_sonneborn(self):
+        s = 0
+        for r in range(len(self.stats)):
+            if self.stats[r] == 1.0:
+                s += self.opponents[r].points
+            elif self.stats[r] == 0.5:
+                s += self.opponents[r].points / 2
+        self.sonneborn = s
+
+    def set_buchholz(self):
+        b = 0
+        for o in self.opponents:
+            b += o.points
+        self.buchholz = b
 
     def set_color_num(self):
         w = 0
@@ -253,10 +270,26 @@ class Round:
                             self.pairings += [[p1, p_0]]
                         found = True
             if not found:
-                pairing = self.pairings[-1]
-                self.leftovers += pairing
-                self.pairings.remove(pairing)
-
+                if len(self.pairings) > 0:
+                    pairing = self.pairings[-1]
+                    self.leftovers += pairing
+                    self.pairings.remove(pairing)
+                else:
+                    if len(self.groups[0].players) > 1:
+                        self.pairings = []
+                        self.groups[0].players[0], self.groups[0].players[1] = \
+                            self.groups[0].players[1], self.groups[0].players[0]
+                        print(1)
+                        self.create_pairings()
+                    else:
+                        print("couldnt find pairing")
+                        """
+                        self.pairings = []
+                        self.groups[1].players += self.groups[0].players
+                        self.groups = self.groups[1:]
+                        print(2)
+                        self.create_pairings()
+                        """
 
     def change_pairings(self, p):
         found = False
@@ -289,7 +322,6 @@ class Round:
     def set_player_colors(self):
         for pairing in self.pairings:
             if len(pairing) == 2:
-                print(pairing[0].colors)
                 pairing[0].colors += ["w"]
                 pairing[1].colors += ["b"]
             else:
@@ -302,6 +334,9 @@ class Round:
                 p1 = pairing[1]
                 p0.opponents += [p1]
                 p1.opponents += [p0]
+            else:
+                p0 = pairing[0]
+                p0.opponents += [Player("bye")]
 
     def set_player_color_nums(self):
         for p in self.players:

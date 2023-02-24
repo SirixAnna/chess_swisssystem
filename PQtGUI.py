@@ -90,9 +90,49 @@ class MainWindow(QMainWindow):
         self.set_players()
         self.click_next_round()
 
+    def sonneborn_order(self):
+        for player in self.players:
+            player.set_sonneborn()
+        p = None
+        p_list = []
+        p_current = []
+        for player in self.players:
+            if p == player.points:
+                p_current += [player]
+            else:
+                p_current.sort(key=lambda p: p.sonneborn, reverse=True)
+                p_current = self.buchholz_order(p_current)
+                p_list += p_current
+                p_current = []
+                p_current += [player]
+                p = player.points
+        p_list += p_current
+        self.players = p_list
+
+    def buchholz_order(self, players):
+        for player in self.players:
+            player.set_buchholz()
+        p = None
+        p_list = []
+        p_current = []
+        for player in players:
+            if p == player.sonneborn:
+                p_current += [player]
+            else:
+                p_current.sort(key=lambda p: p.buchholz, reverse=True)
+                p_list += p_current
+                p_current = []
+                p_current += [player]
+                p = player.sonneborn
+        p_list += p_current
+        players = p_list
+        return players
+
+
     def update_player_table(self):
-        self.players.sort(key=lambda p: p.name, reverse=True)
+        self.players.sort(key=lambda p: p.name)
         self.players.sort(key=lambda p: p.points, reverse=True)
+        self.sonneborn_order()
         for row in range(len(self.players)):
             self.playerTable.setItem(row, 0, QTableWidgetItem(str(self.players[row].name)))
             self.playerTable.setItem(row, 1, QTableWidgetItem(str(self.players[row].points)))
@@ -119,9 +159,11 @@ class MainWindow(QMainWindow):
             result = self.pairingTables[self.cRound].cellWidget(row, 1).currentText()
             result = result.split(":")
             p0.points += float(result[0])
+            p0.stats += [float(result[0])]
             if len(self.pairings[row]) > 1:
                 p1 = self.tournament.round.pairings[row][1]
                 p1.points += float(result[1])
+                p1.stats += [float(result[1])]
 
     def click_add_player(self):
         row_position = self.playerTable.rowCount()
