@@ -24,7 +24,8 @@ def test_colors(pairing):
     if p0.color == p1.color:
         if p0.color == 0:
             return True
-        else: return False
+        else:
+            return False
     else:
         return True
 
@@ -52,11 +53,15 @@ class Player:
         self.color_num = w-b
 
     def set_color(self):
-        if self.color_num == -2 or (self.colors[-1:] == "b" and self.colors[-2:-1] == "b"):
-            self.color = 1
-        elif self.color_num == 2 or (self.colors[-1:] == "w" and self.colors[-2:-1] == "w"):
-            self.color = -1
-        else: self.color = 0
+        if len(self.colors) > 1:
+            if self.color_num == -2 or (self.colors[-1] == "b" and self.colors[-2] == "b"):
+                self.color = 1
+            elif self.color_num == 2 or (self.colors[-1] == "w" and self.colors[-2] == "w"):
+                self.color = -1
+            else:
+                self.color = 0
+        else:
+            self.color = 0
 
 
 class Group:
@@ -77,7 +82,10 @@ class Group:
             found = False
             for p1 in self.unpaired_players[1:]:
                 if p1 not in p0.opponents and test_colors([p0, p1]) and not found:
-                    self.pairings += [[p0, p1]]
+                    if p0.color > p1.color:
+                        self.pairings += [[p0, p1]]
+                    else:
+                        self.pairings += [[p1, p0]]
                     self.unpaired_players.remove(p0)
                     self.unpaired_players.remove(p1)
                     found = True
@@ -91,8 +99,14 @@ class Group:
                             for p1 in self.unpaired_players[1:]:
                                 if p1 not in p1_a.opponents and test_colors([p1_a, p1]) and not found:
                                     self.pairings.remove(pairing)
-                                    self.pairings += [[p0_a, p0]]
-                                    self.pairings += [[p1_a, p1]]
+                                    if p0_a.color > p0.color:
+                                        self.pairings += [[p0_a, p0]]
+                                    else:
+                                        self.pairings += [[p0, p0_a]]
+                                    if p1_a.color > p1.color:
+                                        self.pairings += [[p1_a, p1]]
+                                    else:
+                                        self.pairings += [[p1, p1_a]]
                                     self.unpaired_players.remove(p0)
                                     self.unpaired_players.remove(p1)
                                     found = True
@@ -102,8 +116,14 @@ class Group:
                                     for p1 in self.unpaired_players[1:]:
                                         if p1 not in p0_a.opponents and test_colors([p0_a, p1]) and not found:
                                             self.pairings.remove(pairing)
-                                            self.pairings += [[p1_a, p0]]
-                                            self.pairings += [[p0_a, p1]]
+                                            if p1_a.color > p0.color:
+                                                self.pairings += [[p1_a, p0]]
+                                            else:
+                                                self.pairings += [[p0, p1_a]]
+                                            if p0_a.color > p1.color:
+                                                self.pairings += [[p0_a, p1]]
+                                            else:
+                                                self.pairings += [[p1, p0_a]]
                                             self.unpaired_players.remove(p0)
                                             self.unpaired_players.remove(p1)
                                             found = True
@@ -210,14 +230,26 @@ class Round:
                     if p_0 not in p0.opponents and test_colors([p_0, p0]) and \
                             p_1 not in p1.opponents and test_colors([p_1, p1]):
                         self.pairings.remove(pairing)
-                        self.pairings += [[p_0, p0]]
-                        self.pairings += [[p_1, p1]]
+                        if p_0.color > p0.color:
+                            self.pairings += [[p_0, p0]]
+                        else:
+                            self.pairings += [[p0, p_0]]
+                        if p_1.color > p1.color:
+                            self.pairings += [[p_1, p1]]
+                        else:
+                            self.pairings += [[p1, p_1]]
                         found = True
                     elif p_1 not in p0.opponents and test_colors([p_1, p0]) and \
                             p_0 not in p1.opponents and test_colors([p_0, p1]):
                         self.pairings.remove(pairing)
-                        self.pairings += [[p_1, p0]]
-                        self.pairings += [[p_0, p1]]
+                        if p_1.color > p0.color:
+                            self.pairings += [[p_1, p0]]
+                        else:
+                            self.pairings += [[p0, p_1]]
+                        if p_0.color > p1.color:
+                            self.pairings += [[p_0, p1]]
+                        else:
+                            self.pairings += [[p1, p_0]]
                         found = True
 
     def change_pairings(self, p):
@@ -229,7 +261,10 @@ class Round:
                 if not p0.bye:
                     if p not in p1.opponents and test_colors([p, p1]):
                         self.pairings.remove(pairing)
-                        self.pairings += [[p, p1]]
+                        if p.color > p1.color:
+                            self.pairings += [[p, p1]]
+                        else:
+                            self.pairings += [[p1, p]]
                         self.pairings += [[p0]]
                         p0.bye = True
                         found = True
@@ -237,7 +272,10 @@ class Round:
                     if not p1.bye:
                         if p not in p0.opponents and test_colors([p, p0]):
                             self.pairings.remove(pairing)
-                            self.pairings += [[p, p0]]
+                            if p.color > p0.color:
+                                self.pairings += [[p, p0]]
+                            else:
+                                self.pairings += [[p0, p]]
                             self.pairings += [[p1]]
                             p1.bye = True
                             found = True
@@ -245,10 +283,11 @@ class Round:
     def set_player_colors(self):
         for pairing in self.pairings:
             if len(pairing) == 2:
+                print(pairing[0].colors)
                 pairing[0].colors += ["w"]
                 pairing[1].colors += ["b"]
             else:
-                pairing[0].colors += [None]
+                pairing[0].colors += ["w"]
 
     def set_player_opponents(self):
         for pairing in self.pairings:
