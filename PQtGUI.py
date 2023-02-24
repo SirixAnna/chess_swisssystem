@@ -91,7 +91,8 @@ class MainWindow(QMainWindow):
         self.click_next_round()
 
     def update_player_table(self):
-        self.players.sort(key=lambda p: p.points, reverse= True)
+        self.players.sort(key=lambda p: p.name, reverse=True)
+        self.players.sort(key=lambda p: p.points, reverse=True)
         for row in range(len(self.players)):
             self.playerTable.setItem(row, 0, QTableWidgetItem(str(self.players[row].name)))
             self.playerTable.setItem(row, 1, QTableWidgetItem(str(self.players[row].points)))

@@ -3,6 +3,7 @@ from PQtGUI import *
 # start next round doesnt work, when current pairing table is not currentround
 # empty players raise an error
 # unable to create pairings, when round number is to high for player number
+# sonneborn berger und bucholz (nach end tournament)
 
 # test if all fide rules are fulfilled
 
