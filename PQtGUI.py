@@ -1,7 +1,7 @@
+from swiss_2 import *
 import sys
-from swiss_t import *
-from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QTableWidget, \
-    QTableWidgetItem, QMainWindow, QPushButton, QComboBox
+from PyQt5.QtWidgets import QApplication, QLabel, QTableWidget, \
+    QTableWidgetItem, QMainWindow, QPushButton, QComboBox, QMessageBox
 
 
 class MainWindow(QMainWindow):
@@ -15,7 +15,7 @@ class MainWindow(QMainWindow):
         self.pairings = []
         self.players = []
         self.numRounds = 40
-        self.cround = -1
+        self.cRound = -1
         self.roundHeadings = []
         self.pairingTables = []
         for r in range(self.numRounds):
@@ -55,12 +55,25 @@ class MainWindow(QMainWindow):
             int(width * 1 / 10), self.height - 70, 200, 30)
         self.removePlayerButton.clicked.connect(self.click_remove_player)
 
+        self.roundSelectCombo = QComboBox(self)
+        self.roundSelectCombo.setGeometry(int(self.width * 8 / 10), 160, 200, 30)
+        self.roundSelectCombo.setHidden(True)
+        self.roundSelectCombo.currentIndexChanged.connect(self.change_round)
+
         self.create_player_table()
 
         # swiss_t
         self.tournament = None
 
     def click_end_tournament(self):
+        """
+        for table in self.pairingTables:
+            table.setHidden(True)
+        for heading in self.roundHeadings:
+            heading.setHidden(True)
+        self.playerTable.setGeometry(int(
+            self.width * 4 / 10), 80, 250 + 25, self.height-200)
+        """
         self.close()
 
     def click_start_tournament(self):
@@ -71,23 +84,51 @@ class MainWindow(QMainWindow):
         self.startTournamentButton.setHidden(True)
         self.nextRoundButton.setHidden(False)
         self.endTournamentButton.setHidden(False)
+        self.roundSelectCombo.setHidden(False)
         self.playerTable.setCurrentCell(0, 1)
         self.playerTable.clearSelection()
         self.set_players()
         self.click_next_round()
 
+    def update_player_table(self):
+        self.players.sort(key=lambda p: p.points, reverse= True)
+        for row in range(len(self.players)):
+            self.playerTable.setItem(row, 0, QTableWidgetItem(str(self.players[row].name)))
+            self.playerTable.setItem(row, 1, QTableWidgetItem(str(self.players[row].points)))
+
     def click_next_round(self):
-        self.cround += 1
-        self.tournament.start_round(self.cround)
-        self.set_pairings(self.tournament.round.get_pairings())
+        try:
+            self.set_round_results()
+            self.update_player_table()
+
+            self.cRound += 1
+            self.tournament.start_round(self.cRound)
+            self.set_pairings(self.tournament.round.get_pairings())
+
+        except ValueError:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText("Please select all game results, before starting next round!")
+            msg.setWindowTitle("Warning")
+            msg.exec_()
+
+    def set_round_results(self):
+        for row in range(self.pairingTables[self.cRound].rowCount()):
+            p0 = self.tournament.round.pairings[row][0]
+            result = self.pairingTables[self.cRound].cellWidget(row, 1).currentText()
+            result = result.split(":")
+            p0.points += float(result[0])
+            if len(self.pairings[row]) > 1:
+                p1 = self.tournament.round.pairings[row][1]
+                p1.points += float(result[1])
 
     def click_add_player(self):
-        rowPosition = self.playerTable.rowCount()
-        self.playerTable.insertRow(rowPosition)
-        self.playerTable.setRowHeight(rowPosition, 50)
+        row_position = self.playerTable.rowCount()
+        self.playerTable.insertRow(row_position)
+        self.playerTable.setRowHeight(row_position, 50)
 
     def click_remove_player(self):
-        pass
+        self.playerTable.removeRow(self.playerTable.currentRow())
 
     def set_players(self):
         rows = self.playerTable.rowCount()
@@ -117,31 +158,49 @@ class MainWindow(QMainWindow):
 
     def create_pairing_table(self):
         # create Pairing Table
-        self.roundHeadings[self.cround].setHidden(False)
-        self.roundHeadings[self.cround].setText("Round " + str(self.cround+1))
-        self.roundHeadings[self.cround].move(int(self.width*4/10), 50)
-        self.roundHeadings[self.cround-1].setHidden(True)
+        for heading in self.roundHeadings:
+            heading.setHidden(True)
+        self.roundHeadings[self.cRound].setHidden(False)
+        self.roundHeadings[self.cRound].setText("Round " + str(self.cRound + 1))
+        self.roundHeadings[self.cRound].move(int(self.width * 4 / 10), 50)
 
-        self.pairingTables[self.cround].setHidden(False)
-        self.pairingTables[self.cround].setColumnCount(3)
-        self.pairingTables[self.cround].setColumnWidth(0, 200)
-        self.pairingTables[self.cround].setColumnWidth(1, 100)
-        self.pairingTables[self.cround].setColumnWidth(2, 200)
-        self.pairingTables[self.cround-1].setHidden(True)
+        if not self.cRound < len(self.roundSelectCombo):
+            self.roundSelectCombo.addItem("Round " + str(self.cRound + 1))
+        self.roundSelectCombo.setCurrentIndex(self.cRound)
 
-        self.pairingTables[self.cround].setRowCount(len(self.pairings))
+        for table in self.pairingTables:
+            table.setHidden(True)
+        self.pairingTables[self.cRound].setHidden(False)
+        self.pairingTables[self.cRound].setColumnCount(3)
+        self.pairingTables[self.cRound].setColumnWidth(0, 200)
+        self.pairingTables[self.cRound].setColumnWidth(1, 100)
+        self.pairingTables[self.cRound].setColumnWidth(2, 200)
+
+        self.pairingTables[self.cRound].setRowCount(len(self.pairings))
         for row in range(len(self.pairings)):
-            self.pairingTables[self.cround].setRowHeight(row, 50)
-            self.pairingTables[self.cround].setItem(row, 0, QTableWidgetItem(str(self.pairings[row][0])))
+            self.pairingTables[self.cRound].setRowHeight(row, 50)
+            self.pairingTables[self.cRound].setItem(row, 0, QTableWidgetItem(str(self.pairings[row][0])))
             combo = QComboBox()
-            combo.addItems(["", "0:1", "0,5:0,5", "1:0"])
-            self.pairingTables[self.cround].setCellWidget(row, 1, combo)
+            combo.addItems(["", "0:1", "0.5:0.5", "1:0"])
+            self.pairingTables[self.cRound].setCellWidget(row, 1, combo)
             if len(self.pairings[row]) > 1:
-                self.pairingTables[self.cround].setItem(row, 2, QTableWidgetItem(str(self.pairings[row][1])))
+                self.pairingTables[self.cRound].setItem(row, 2, QTableWidgetItem(str(self.pairings[row][1])))
 
-        self.pairingTables[self.cround].setGeometry(int(self.width * 4 / 10), 80, 500 + 25, 50 * len(self.pairings) + 25)
+        self.pairingTables[self.cRound].setGeometry(
+            int(self.width * 4 / 10), 80, 500 + 25, 50 * len(self.pairings) + 25)
 
-        self.pairingTables[self.cround].setHorizontalHeaderLabels(["White", "Result", "Black"])
+        self.pairingTables[self.cRound].setHorizontalHeaderLabels(["White", "Result", "Black"])
+
+    def change_round(self):
+        if not self.roundSelectCombo.currentIndex() == self.cRound:
+            self.cRound = self.roundSelectCombo.currentIndex()
+            for table in self.pairingTables:
+                table.setHidden(True)
+            self.pairingTables[self.cRound].setHidden(False)
+            self.pairingTables[self.cRound].clearSelection()
+            for heading in self.roundHeadings:
+                heading.setHidden(True)
+            self.roundHeadings[self.cRound].setHidden(False)
 
 
 if __name__ == '__main__':
@@ -156,7 +215,7 @@ if __name__ == '__main__':
 
     # create window
     window = MainWindow(w, h)
-    #window.set_players()  # set players
+    # window.set_players()  # set players
     window.show()
 
     sys.exit(app.exec())

@@ -1,8 +1,5 @@
-# import time
-import sys
 import math
-from PQtGUI import *
-from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QTableWidget, QTableWidgetItem, QMainWindow, QPushButton
+# continue with c
 
 
 def get_names(players):
@@ -30,7 +27,7 @@ class Player:
                 w += 1
             if color == "b":
                 b += 1
-        self.color_num = w-b
+        self.color_num = w - b
 
 
 class SubGroup:
@@ -52,22 +49,22 @@ class Group:
         self.b = 0
         self.q = 0
 
+        self.trials = 0
+
     def create_subs(self):
         unsubed_p = self.players.copy()
-        n_p = int(len(self.players)/2)  # num players per sub
-        f = 0
-        a = 0
-        while len(self.sub0.players) < n_p:
-            if f < len(self.floaters):
-                self.sub0 += [self.floaters[f]]
-                unsubed_p.remove(self.floaters[f])
-                f += 1
-            else:
-                if self.players[a] in unsubed_p:
-                    self.sub0 += [self.players[a]]
-                    unsubed_p.remove(self.players[a])
-                a += 1
-        self.sub1.players = unsubed_p
+        n_p = int(len(self.players) / 2)  # num players per sub
+        if len(self.floaters) > 0:
+            for p in self.floaters:
+                if len(self.sub0.players) < n_p:
+                    self.sub0.players += [p]
+                    unsubed_p.remove(p)
+            self.sub1.players = unsubed_p
+        else:
+            while len(self.sub0.players) < n_p:
+                self.sub0.players += [unsubed_p[0]]
+                unsubed_p.remove(unsubed_p[0])
+            self.sub1.players = unsubed_p
 
     def add_from_above(self, floaters):
         self.players += floaters
@@ -77,7 +74,6 @@ class Group:
     def order_by_points(self):
         self.players.sort(key=lambda p: p.points, reverse=True)
 
-    """
     def set_bwq(self):
         for p in self.players:
             if p.color_num < 0:
@@ -86,15 +82,70 @@ class Group:
                 self.w += 1
             else:
                 self.b += 1
-        self.q = math.ceil(len(self.players)/2)
+        self.q = math.ceil(len(self.players) / 2)
         if self.b > self.w:
-            self.x = self.b-self.q
+            self.x = self.b - self.q
         else:
-            self.x = self.w-self.q
-    """
-    def create_pairings(self):
-        # self.set_bwq()
+            self.x = self.w - self.q
 
+    def set_colors(self, pairing):
+        p0 = pairing[0]
+        p1 = pairing[1]
+        if p0 not in p1.opponents:
+            if p0.color_num == p1.color_num:
+                if abs(p0.color_num) == 2:
+                    return False
+                else:
+                    self.pairings += [[p1, p0]]
+                    return True
+            elif p0.color_num < p1.color_num:
+                self.pairings += [[p0, p1]]
+                return True
+            elif p0.color_num > p1.color_num:
+                self.pairings += [[p1, p0]]
+                return True
+        else:
+            return False
+
+    def create_pairings(self):
+        #self.set_bwq()
+        self.unpaired_players = self.players.copy()
+        for p in range(len(self.sub0.players)):
+            print("p"+str(p))
+            success = self.set_colors([self.sub0.players[p], self.sub1.players[p]])
+            if not success:
+                if self.trials < 20:
+                    print("t"+str(self.trials))
+                    self.trials += 1
+                    self.change_order(p)
+            else:
+                print(self.unpaired_players)
+                print(self.players)
+                print(self.pairings)
+                print(self.sub0.players[p])
+                print(p)
+                self.unpaired_players.remove(self.sub0.players[p])
+                self.unpaired_players.remove(self.sub1.players[p])
+        if len(self.unpaired_players) > 1 and self.trials < 20:
+            self.players = self.unpaired_players.copy()
+            self.floaters = []
+            self.sub0.players = []
+            self.sub1.players = []
+            self.create_subs()
+            self.create_pairings()
+        else:
+            self.set_floaters()
+
+    def change_order(self, p):
+        self.unpaired_players = self.players.copy()
+        self.pairings = []
+        if len(self.sub1.players) > p+1:
+            self.sub1.players[p], self.sub1.players[p + 1] = self.sub1.players[p + 1], self.sub1.players[p]
+        elif len(self.sub1.players) < p+1:
+            self.sub1.players[p], self.sub1.players[p - 1] = self.sub1.players[p - 1], self.sub1.players[p]
+        self.create_pairings()
+
+        """
         self.order_by_points()
         self.unpaired_players = self.players.copy()
         self.npairings = int(len(self.players)/2)
@@ -103,7 +154,7 @@ class Group:
             self.pairings += [[self.players[k], self.players[k+self.npairings]]]
             self.unpaired_players.remove(self.players[k])
             self.unpaired_players.remove(self.players[k+self.npairings])
-
+        """
         self.set_floaters()
 
     def set_floaters(self):
@@ -158,6 +209,7 @@ class Round:
     def create_pairings(self):
         for group in self.groups:
             group.add_from_above(self.leftovers)
+            group.create_subs()
             group.create_pairings()
             self.leftovers = group.unpaired_players
             for p in self.leftovers:
@@ -167,6 +219,15 @@ class Round:
             self.groups += [Group(self.leftovers)]
             self.pairings += [self.groups[-1].players]
         self.set_player_colors()
+        self.set_player_opponents()
+
+    def set_player_opponents(self):
+        for pairing in self.pairings:
+            if len(pairing) > 1:
+                p0 = pairing[0]
+                p1 = pairing[1]
+                p0.opponents += [p1]
+                p1.opponents += [p0]
 
     def set_player_colors(self):
         for pairing in self.pairings:
