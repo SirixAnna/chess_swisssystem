@@ -128,7 +128,6 @@ class MainWindow(QMainWindow):
         players = p_list
         return players
 
-
     def update_player_table(self):
         self.players.sort(key=lambda p: p.name)
         self.players.sort(key=lambda p: p.points, reverse=True)

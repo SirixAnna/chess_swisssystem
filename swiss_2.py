@@ -1,4 +1,6 @@
 from PQtGUI import *
+import random
+import time
 # Todo
 # start next round doesnt work, when current pairing table is not currentround
 # empty players raise an error
@@ -92,7 +94,8 @@ class Group:
         self.pairings = []
 
     def create_pairings(self):
-        self.order_by_points()
+        # self.order_by_points()
+        random.shuffle(self.players)
         self.unpaired_players = self.players.copy()
         self.npairings = int(len(self.players)/2)
         while len(self.unpaired_players) > 1:
@@ -211,7 +214,8 @@ class Round:
                 if p.points == points:
                     group += [p]
                     ungrouped_players.remove(p)
-            self.groups += [Group(group)]
+            if not len(group) == 0:
+                self.groups += [Group(group)]
             points -= 0.5
 
     def create_pairings(self):
@@ -277,19 +281,24 @@ class Round:
                 else:
                     if len(self.groups[0].players) > 1:
                         self.pairings = []
-                        self.groups[0].players[0], self.groups[0].players[1] = \
-                            self.groups[0].players[1], self.groups[0].players[0]
+                        self.leftovers = []
+                        self.groups = []
+                        self.create_groups()
                         print(1)
                         self.create_pairings()
                     else:
                         print("couldnt find pairing")
-                        """
+                        #time.sleep(1)
                         self.pairings = []
+                        self.leftovers = []
+                        self.groups = []
+                        self.create_groups()
+                        print(self.groups[1].players)
                         self.groups[1].players += self.groups[0].players
-                        self.groups = self.groups[1:]
+                        print(self.groups[1].players)
+                        self.groups.pop(0)
                         print(2)
                         self.create_pairings()
-                        """
 
     def change_pairings(self, p):
         found = False
