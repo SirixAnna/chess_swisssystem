@@ -251,6 +251,11 @@ class Round:
                         else:
                             self.pairings += [[p1, p_0]]
                         found = True
+            if not found:
+                pairing = self.pairings[-1]
+                self.leftovers += pairing
+                self.pairings.remove(pairing)
+
 
     def change_pairings(self, p):
         found = False
